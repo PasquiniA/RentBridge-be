@@ -1,0 +1,51 @@
+# FastAPI Legal Backend - Docker Compose Configuration
+
+services:
+  # FastAPI Backend Service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fastapi-legal-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      # Mount code for development (comment out for production)
+      - .:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - app-network
+
+  # Ngrok Tunnel Service
+  tunnel:
+    image: ngrok/ngrok:latest
+    container_name: ngrok-tunnel
+    command:
+      - "http"
+      - "web:8000"
+      - "--host-header=web:8000"
+    ports:
+      - "4040:4040"  # Ngrok dashboard
+    environment:
+      # Add your ngrok auth token here or in .env
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}
+    depends_on:
+      - web
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
